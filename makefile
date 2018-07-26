@@ -28,7 +28,7 @@ LIBS         = -lpsrdada -lcudart -lcuda -lm -lrt -lcufft -lpthread
 LIB_DIRS     = -L/usr/local/cuda/lib64 -L/usr/local/lib
 INCLUDE_DIRS = -I/usr/local/include
 
-all:paf_capture paf_baseband2power paf_diskdb
+all:paf_capture paf_baseband2flux paf_diskdb paf_flux2udp
 
 paf_capture:paf_capture.o capture.o hdr.o sync.o
 	$(CC) -o paf_capture paf_capture.o capture.o hdr.o sync.o $(LIB_DIRS) $(LIBS) 
@@ -45,11 +45,11 @@ hdr.o:hdr.c
 sync.o:sync.c
 	$(CC) -c sync.c $(INCLUDE_DIRS) ${C_FLAGS}
 
-paf_baseband2power:cudautil.o kernel.o paf_baseband2power.o baseband2power.o
-	$(NVCC) -o paf_baseband2power cudautil.o kernel.o paf_baseband2power.o baseband2power.o $(LIB_DIRS) $(LIBS) 
+paf_baseband2flux:cudautil.o kernel.o paf_baseband2flux.o baseband2flux.o
+	$(NVCC) -o paf_baseband2flux cudautil.o kernel.o paf_baseband2flux.o baseband2flux.o $(LIB_DIRS) $(LIBS) 
 
-paf_baseband2power.o:paf_baseband2power.cu
-	$(NVCC) -c paf_baseband2power.cu $(INCLUDE_DIRS) ${C_FLAGS} ${CU_FLAGS}
+paf_baseband2flux.o:paf_baseband2flux.cu
+	$(NVCC) -c paf_baseband2flux.cu $(INCLUDE_DIRS) ${C_FLAGS} ${CU_FLAGS}
 
 kernel.o:kernel.cu
 	$(NVCC) -c kernel.cu $(INCLUDE_DIRS) ${C_FLAGS} ${CU_FLAGS}
@@ -57,8 +57,8 @@ kernel.o:kernel.cu
 cudautil.o:cudautil.cu
 	$(NVCC) -c cudautil.cu $(INCLUDE_DIRS) ${C_FLAGS} ${CU_FLAGS}
 
-baseband2power.o:baseband2power.cu
-	$(NVCC) -c baseband2power.cu $(INCLUDE_DIRS) ${C_FLAGS} ${CU_FLAGS}
+baseband2flux.o:baseband2flux.cu
+	$(NVCC) -c baseband2flux.cu $(INCLUDE_DIRS) ${C_FLAGS} ${CU_FLAGS}
 
 paf_diskdb:paf_diskdb.o diskdb.o cudautil.o
 	$(NVCC) -o paf_diskdb paf_diskdb.o diskdb.o cudautil.o $(LIB_DIRS) $(LIBS) 
@@ -71,6 +71,15 @@ diskdb.o:diskdb.cu
 
 cudautil.o:cudautil.cu
 	$(NVCC) -c cudautil.cu $(INCLUDE_DIRS) ${C_FLAGS} ${CU_FLAGS}
+
+paf_flux2udp:paf_flux2udp.o flux2udp.o
+	$(CC) -o paf_flux2udp paf_flux2udp.o flux2udp.o $(LIB_DIRS) $(LIBS) 
+
+paf_flux2udp.o:paf_flux2udp.c
+	$(CC) -c paf_flux2udp.c $(INCLUDE_DIRS) ${C_FLAGS}
+
+flux2udp.o:flux2udp.c
+	$(CC) -c flux2udp.c $(INCLUDE_DIRS) ${C_FLAGS}
 
 clean:
 	rm -f *.o *~

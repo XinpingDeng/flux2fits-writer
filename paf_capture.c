@@ -70,7 +70,6 @@ int main(int argc, char **argv)
 	case 'a':	  	  
 	  if (sscanf (optarg, "%x", &conf.key) != 1)
 	    {
-	      //multilog(runtime_log, LOG_INFO, "Could not parse key from %s, which happens at \"%s\", line [%d].\n", optarg, __FILE__, __LINE__);
 	      fprintf (stderr, "Could not parse key from %s, which happens at \"%s\", line [%d].\n", optarg, __FILE__, __LINE__);
 	      return EXIT_FAILURE;
 	    }

@@ -3,7 +3,7 @@
 #endif
 
 #include "kernel.cuh"
-#include "baseband2power.cuh"
+#include "baseband2flux.cuh"
 #include "cudautil.cuh"
 
 

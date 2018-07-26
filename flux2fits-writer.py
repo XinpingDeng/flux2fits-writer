@@ -34,18 +34,22 @@ def ConfigSectionMap(cfname, section):
 def capture(capture_key, capture_sod, capture_ndf, hdr, nic, capture_hfname, capture_efname, freq, length, directory, source_name, ra, dec):
     os.system("./paf_capture -a {:s} -b {:s} -c {:d} -d {:d} -e {:d} -f {:s} -g {:s} -i {:f} -j {:f} -k {:s} -l {:s} -m {:s} -n {:s}".format(capture_key, capture_sod, capture_ndf, hdr, nic, capture_hfname, capture_efname, freq, length, directory, source_name, ra, dec))
 
-def baseband2power(baseband2power_cpu, capture_key, baseband2power_key, directory, numa, capture_ndf, baseband2power_nchan, baseband2power_sod, multi_gpu):
+def baseband2flux(baseband2flux_cpu, capture_key, baseband2flux_key, directory, numa, capture_ndf, baseband2flux_nchan, baseband2flux_sod, multi_gpu):
     if multi_gpu:
-        print ('taskset -c {:d} ./paf_baseband2power -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2power_cpu, capture_key, baseband2power_key, directory, numa, capture_ndf, baseband2power_nchan, baseband2power_sod))
-        os.system('taskset -c {:d} ./paf_baseband2power -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2power_cpu, capture_key, baseband2power_key, directory, numa, capture_ndf, baseband2power_nchan, baseband2power_sod))
+        print ('taskset -c {:d} ./paf_baseband2flux -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2flux_cpu, capture_key, baseband2flux_key, directory, numa, capture_ndf, baseband2flux_nchan, baseband2flux_sod))
+        os.system('taskset -c {:d} ./paf_baseband2flux -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2flux_cpu, capture_key, baseband2flux_key, directory, numa, capture_ndf, baseband2flux_nchan, baseband2flux_sod))
     else:
-        print ('taskset -c {:d} ./paf_baseband2power -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2power_cpu, capture_key, baseband2power_key, directory, 0, capture_ndf, baseband2power_nchan, baseband2power_sod))
-        os.system('taskset -c {:d} ./paf_baseband2power -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2power_cpu, capture_key, baseband2power_key, directory, 0, capture_ndf, baseband2power_nchan, baseband2power_sod))
+        print ('taskset -c {:d} ./paf_baseband2flux -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2flux_cpu, capture_key, baseband2flux_key, directory, 0, capture_ndf, baseband2flux_nchan, baseband2flux_sod))
+        os.system('taskset -c {:d} ./paf_baseband2flux -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2flux_cpu, capture_key, baseband2flux_key, directory, 0, capture_ndf, baseband2flux_nchan, baseband2flux_sod))
             
-def dbdisk(dbdisk_cpu, baseband2power_key, directory):
-    print ('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2power_key, directory))
-    os.system('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2power_key, directory))
-
+def dbdisk(dbdisk_cpu, baseband2flux_key, directory):
+    print ('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
+    os.system('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
+    
+def dbdisk(dbdisk_cpu, baseband2flux_key, directory):
+    print ('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
+    os.system('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
+    
 def main(args):
     cfname       = args.cfname[0]
     numa         = args.numa[0]
@@ -103,20 +107,20 @@ def main(args):
     capture_nreader = ConfigSectionMap(cfname, "CaptureConf")['nreader']
     capture_sod     = ConfigSectionMap(cfname, "CaptureConf")['sod']
 
-    capture_ndf     = int(integration / tdf_sec) - int(integration / tdf_sec) % 32 # 32 = (4 * BLKSZ_SUM1) / NSAMP_DF, from the baseband2power.cu
+    capture_ndf     = int(integration / tdf_sec) - int(integration / tdf_sec) % 32 # 32 = (4 * BLKSZ_SUM1) / NSAMP_DF, from the baseband2flux.cu
     capture_rbufsz  = capture_ndf *  nchk_nic * 7168
     
-    # baseband2power configuration
-    baseband2power_key        = ConfigSectionMap(cfname, "Baseband2powerConf")['key']
-    baseband2power_kfname     = "{:s}.key".format(ConfigSectionMap(cfname, "Baseband2powerConf")['kfname_prefix'])
-    baseband2power_key        = format(int("0x{:s}".format(baseband2power_key), 0), 'x')
-    baseband2power_sod        = int(ConfigSectionMap(cfname, "Baseband2powerConf")['sod'])
-    baseband2power_nreader    = ConfigSectionMap(cfname, "Baseband2powerConf")['nreader']
-    baseband2power_nbuf       = ConfigSectionMap(cfname, "Baseband2powerConf")['nblk']
-    baseband2power_nchan      = int(ConfigSectionMap(cfname, "Baseband2powerConf")['nchan'])
-    baseband2power_nbyte      = int(ConfigSectionMap(cfname, "Baseband2powerConf")['nbyte'])
-    baseband2power_rbufsz     = baseband2power_nchan * baseband2power_nbyte
-    baseband2power_cpu        = ncpu_numa * numa + capture_ncpu
+    # baseband2flux configuration
+    baseband2flux_key        = ConfigSectionMap(cfname, "Baseband2fluxConf")['key']
+    baseband2flux_kfname     = "{:s}.key".format(ConfigSectionMap(cfname, "Baseband2fluxConf")['kfname_prefix'])
+    baseband2flux_key        = format(int("0x{:s}".format(baseband2flux_key), 0), 'x')
+    baseband2flux_sod        = int(ConfigSectionMap(cfname, "Baseband2fluxConf")['sod'])
+    baseband2flux_nreader    = ConfigSectionMap(cfname, "Baseband2fluxConf")['nreader']
+    baseband2flux_nbuf       = ConfigSectionMap(cfname, "Baseband2fluxConf")['nblk']
+    baseband2flux_nchan      = int(ConfigSectionMap(cfname, "Baseband2fluxConf")['nchan'])
+    baseband2flux_nbyte      = int(ConfigSectionMap(cfname, "Baseband2fluxConf")['nbyte'])
+    baseband2flux_rbufsz     = baseband2flux_nchan * baseband2flux_nbyte
+    baseband2flux_cpu        = ncpu_numa * numa + capture_ncpu
     
     # Dbdisk configuration
     dbdisk_cpu = ncpu_numa * numa + capture_ncpu + 1
@@ -132,32 +136,32 @@ def main(args):
     # Create key files
     # and destroy share memory at the last time
     # this will save prepare time for the pipeline as well
-    baseband2power_key_file = open(baseband2power_kfname, "w")
-    baseband2power_key_file.writelines("DADA INFO:\n")
-    baseband2power_key_file.writelines("key {:s}\n".format(baseband2power_key))
-    baseband2power_key_file.close()
+    baseband2flux_key_file = open(baseband2flux_kfname, "w")
+    baseband2flux_key_file.writelines("DADA INFO:\n")
+    baseband2flux_key_file.writelines("key {:s}\n".format(baseband2flux_key))
+    baseband2flux_key_file.close()
 
     os.system("dada_db -l -p -k {:s} -b {:d} -n {:s} -r {:s}".format(capture_key, capture_rbufsz, capture_nbuf, capture_nreader))
-    os.system("dada_db -l -p -k {:s} -b {:d} -n {:s} -r {:s}".format(baseband2power_key, baseband2power_rbufsz, baseband2power_nbuf, baseband2power_nreader))
+    os.system("dada_db -l -p -k {:s} -b {:d} -n {:s} -r {:s}".format(baseband2flux_key, baseband2flux_rbufsz, baseband2flux_nbuf, baseband2flux_nreader))
 
     t_capture        = threading.Thread(target = capture, args = (capture_key, capture_sod, capture_ndf, hdr, nic, capture_hfname, capture_efname, freq, length, directory, source_name, ra, dec,))
-    t_baseband2power = threading.Thread(target = baseband2power, args = (baseband2power_cpu, capture_key, baseband2power_key, directory, numa, capture_ndf, baseband2power_nchan, baseband2power_sod, multi_gpu,))
-    t_dbdisk         = threading.Thread(target = dbdisk, args = (dbdisk_cpu, baseband2power_key, directory,))
+    t_baseband2flux = threading.Thread(target = baseband2flux, args = (baseband2flux_cpu, capture_key, baseband2flux_key, directory, numa, capture_ndf, baseband2flux_nchan, baseband2flux_sod, multi_gpu,))
+    t_dbdisk         = threading.Thread(target = dbdisk, args = (dbdisk_cpu, baseband2flux_key, directory,))
 
     t_capture.start()
-    t_baseband2power.start()
+    t_baseband2flux.start()
     t_dbdisk.start()
 
     t_capture.join()
-    t_baseband2power.join()
+    t_baseband2flux.join()
     t_dbdisk.join()
 
     os.system("dada_db -d -k {:s}".format(capture_key))
-    os.system("dada_db -d -k {:s}".format(baseband2power_key))
+    os.system("dada_db -d -k {:s}".format(baseband2flux_key))
     
 if __name__ == "__main__":
     # Read in command line arguments
-    parser = argparse.ArgumentParser(description='Convert baseband data into power')
+    parser = argparse.ArgumentParser(description='Convert baseband data into flux')
     parser.add_argument('-a', '--cfname', type=str, nargs='+',
                         help='The name of configuration file')
     parser.add_argument('-b', '--directory', type=str, nargs='+',
