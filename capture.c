@@ -654,10 +654,13 @@ int destroy_capture(conf_t conf)
   for(i = 0; i < conf.active_ports; i++)
     pthread_mutex_destroy(&hdr_ref_mutex[i]);
 
+  //ipcio_destroy(conf.hdu->data_block);
+  //ipcbuf_destroy(conf.hdu->header_block);
+  
   dada_hdu_unlock_write(conf.hdu);
   dada_hdu_disconnect(conf.hdu);
   dada_hdu_destroy(conf.hdu);
-
+  
   return EXIT_SUCCESS;
 }
 

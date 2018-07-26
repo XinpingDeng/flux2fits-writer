@@ -15,6 +15,9 @@
 #define NCHK_NIC      48
 #define NBYTE         4
 
+#define DADA_TIMESTR      "%Y-%m-%d-%H:%M:%S"
+#define FITS_TIMESTR      "%Y-%m-%dT%H:%M:%S"
+
 typedef struct conf_t
 {
   key_t key;

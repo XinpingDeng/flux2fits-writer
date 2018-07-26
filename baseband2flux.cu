@@ -175,9 +175,17 @@ int destroy_process(conf_t conf)
   cudaFree(conf.buf_rt2);
 
   dada_cuda_dbunregister(conf.hdu_in);
+
   dada_hdu_unlock_read(conf.hdu_in);
-  dada_hdu_unlock_write(conf.hdu_out);
+  dada_hdu_disconnect(conf.hdu_in);
+  dada_hdu_destroy(conf.hdu_in);
+
+  //ipcio_destroy(conf.hdu_out->data_block);
+  //ipcbuf_destroy(conf.hdu_out->header_block);
   
+  dada_hdu_unlock_write(conf.hdu_out);
+  dada_hdu_disconnect(conf.hdu_out);
+  dada_hdu_destroy(conf.hdu_out);
   return EXIT_SUCCESS;
 }
 

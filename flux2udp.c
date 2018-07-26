@@ -63,12 +63,37 @@ int do_flux2udp(conf_t conf)
 {
   uint64_t block_id;
   size_t curbufsz;
+  struct tm tm0;
+  char utc[MSTR_LEN];
+  double tsamp;
+  double tt;
+  time_t tt_i;
+  double tt_f;
   
   read_header(&conf); // Get information from header
-
+  strptime(conf.utc_start, DADA_TIMESTR, &tm0);
+  tt    = mktime(&tm0) + conf.picoseconds / 1E12;
+  tsamp = conf.tsamp;
+  
   while(conf.hdu->data_block->curbufsz == conf.buf_size)
     {
+      tt_i = (time_t)tt;
+      tt_f = tt - tt_i;
+
+      strftime (utc, MSTR_LEN, FITS_TIMESTR, gmtime(&tt_i)); // String start time without fraction second
+      sprintf(utc, "%s.%04dUTC ", utc, (int)(tt_f * 1E4));
+
+      fprintf(stdout, "%s\t%f\n", utc, tt_f);
+      
+      if(ipcio_close_block_read(conf.hdu->data_block, conf.hdu->data_block->curbufsz)<0)
+      	{
+	  multilog (runtime_log, LOG_ERR, "close_buffer: ipcio_close_block_write failed\n");
+	  fprintf(stderr, "close_buffer: ipcio_close_block_write failed, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
+	  return EXIT_FAILURE;
+	}
       conf.hdu->data_block->curbuf = ipcio_open_block_read(conf.hdu->data_block, &curbufsz, &block_id);
+      
+      tt += tsamp/1.E6;
     }
   
   return EXIT_SUCCESS;
@@ -76,8 +101,10 @@ int do_flux2udp(conf_t conf)
 
 int destroy_flux2udp(conf_t conf)
 {
-  
   dada_hdu_unlock_read(conf.hdu);
+  dada_hdu_disconnect(conf.hdu);
+  dada_hdu_destroy(conf.hdu);
+  
   return EXIT_SUCCESS;
 }
 
@@ -106,7 +133,7 @@ int read_header(conf_t *conf)
       return EXIT_FAILURE;
     }    
   
-  if (ascii_header_get(conf->hdrbuf, "PICOSECONDS", "%ld", &(conf->picoseconds)) < 0)  
+  if (ascii_header_get(conf->hdrbuf, "PICOSECONDS", "%lf", &(conf->picoseconds)) < 0)  
     {
       multilog(runtime_log, LOG_ERR, "Error getting PICOSECONDS, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
       fprintf(stderr, "Error getting PICOSECONDS, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
@@ -117,6 +144,13 @@ int read_header(conf_t *conf)
     {
       multilog(runtime_log, LOG_ERR, "Error getting UTC_START, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
       fprintf(stderr, "Error getting UTC_START, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
+      return EXIT_FAILURE;
+    }
+
+  if(ipcbuf_mark_cleared (conf->hdu->header_block))  // We are the only one reader, so that we can clear it after read;
+    {
+      multilog(runtime_log, LOG_ERR, "Could not clear header block\n");
+      fprintf(stderr, "Error header_clear, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
       return EXIT_FAILURE;
     }
   

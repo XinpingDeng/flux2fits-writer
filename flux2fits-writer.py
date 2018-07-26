@@ -42,13 +42,13 @@ def baseband2flux(baseband2flux_cpu, capture_key, baseband2flux_key, directory, 
         print ('taskset -c {:d} ./paf_baseband2flux -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2flux_cpu, capture_key, baseband2flux_key, directory, 0, capture_ndf, baseband2flux_nchan, baseband2flux_sod))
         os.system('taskset -c {:d} ./paf_baseband2flux -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2flux_cpu, capture_key, baseband2flux_key, directory, 0, capture_ndf, baseband2flux_nchan, baseband2flux_sod))
             
-def dbdisk(dbdisk_cpu, baseband2flux_key, directory):
-    print ('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
-    os.system('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
+def flux2udp(flux2udp_cpu, baseband2flux_key, directory, ip, port):
+    print "taskset -c {:d} ./paf_flux2udp -a {:s} -b {:s} -c {:s} -d {:d} ".format(flux2udp_cpu, baseband2flux_key, directory, ip, port)
+    os.system("taskset -c {:d} ./paf_flux2udp -a {:s} -b {:s} -c {:s} -d {:d} ".format(flux2udp_cpu, baseband2flux_key, directory, ip, port))
     
-def dbdisk(dbdisk_cpu, baseband2flux_key, directory):
-    print ('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
-    os.system('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
+#def dbdisk(dbdisk_cpu, baseband2flux_key, directory):
+#    print ('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
+#    os.system('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
     
 def main(args):
     cfname       = args.cfname[0]
@@ -60,7 +60,8 @@ def main(args):
     length       = args.length[0]
     integration  = args.integration[0]
     interface    = args.interface[0]
-
+    ip, port     = interface.split(":")[0], int(interface.split(":")[1])
+    
     # Bind to multicast
     multicast_group = '224.1.1.1'
     server_address = ('', 5007)
@@ -122,8 +123,11 @@ def main(args):
     baseband2flux_rbufsz     = baseband2flux_nchan * baseband2flux_nbyte
     baseband2flux_cpu        = ncpu_numa * numa + capture_ncpu
     
-    # Dbdisk configuration
-    dbdisk_cpu = ncpu_numa * numa + capture_ncpu + 1
+    ## Dbdisk configuration
+    #dbdisk_cpu = ncpu_numa * numa + capture_ncpu + 1
+
+    # flux2udp configuration
+    flux2udp_cpu = ncpu_numa * numa + capture_ncpu + 1
     
     # Create key files
     # and destroy share memory at the last time
@@ -144,17 +148,20 @@ def main(args):
     os.system("dada_db -l -p -k {:s} -b {:d} -n {:s} -r {:s}".format(capture_key, capture_rbufsz, capture_nbuf, capture_nreader))
     os.system("dada_db -l -p -k {:s} -b {:d} -n {:s} -r {:s}".format(baseband2flux_key, baseband2flux_rbufsz, baseband2flux_nbuf, baseband2flux_nreader))
 
-    t_capture        = threading.Thread(target = capture, args = (capture_key, capture_sod, capture_ndf, hdr, nic, capture_hfname, capture_efname, freq, length, directory, source_name, ra, dec,))
+    t_capture       = threading.Thread(target = capture, args = (capture_key, capture_sod, capture_ndf, hdr, nic, capture_hfname, capture_efname, freq, length, directory, source_name, ra, dec,))
     t_baseband2flux = threading.Thread(target = baseband2flux, args = (baseband2flux_cpu, capture_key, baseband2flux_key, directory, numa, capture_ndf, baseband2flux_nchan, baseband2flux_sod, multi_gpu,))
-    t_dbdisk         = threading.Thread(target = dbdisk, args = (dbdisk_cpu, baseband2flux_key, directory,))
+    #t_dbdisk         = threading.Thread(target = dbdisk, args = (dbdisk_cpu, baseband2flux_key, directory,))
+    t_flux2udp      = threading.Thread(target = flux2udp, args = (flux2udp_cpu, baseband2flux_key, directory, ip, port, ))
 
     t_capture.start()
     t_baseband2flux.start()
-    t_dbdisk.start()
+    #t_dbdisk.start()
+    t_flux2udp.start()
 
     t_capture.join()
     t_baseband2flux.join()
-    t_dbdisk.join()
+    #t_dbdisk.join()
+    t_flux2udp.join()
 
     os.system("dada_db -d -k {:s}".format(capture_key))
     os.system("dada_db -d -k {:s}".format(baseband2flux_key))
