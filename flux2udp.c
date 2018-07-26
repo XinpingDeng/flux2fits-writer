@@ -63,26 +63,23 @@ int do_flux2udp(conf_t conf)
 {
   uint64_t block_id;
   size_t curbufsz;
-  struct tm tm0;
+  struct tm tm;
   char utc[MSTR_LEN];
-  double tsamp;
-  double tt;
+  double tsamp, tt, tt_f;
   time_t tt_i;
-  double tt_f;
   
   read_header(&conf); // Get information from header
-  strptime(conf.utc_start, DADA_TIMESTR, &tm0);
-  tt    = mktime(&tm0) + conf.picoseconds / 1E12;
-  tsamp = conf.tsamp;
+  strptime(conf.utc_start, DADA_TIMESTR, &tm);
+  tsamp = conf.tsamp / 1.0E6; // In seconds
+  tt    = mktime(&tm) + conf.picoseconds / 1E12 + tsamp / 2.0; // To added in the fraction part of reference time and half of the sampling time (the time stamps should be at the middle of integration)
   
   while(conf.hdu->data_block->curbufsz == conf.buf_size)
     {
       tt_i = (time_t)tt;
       tt_f = tt - tt_i;
 
-      strftime (utc, MSTR_LEN, FITS_TIMESTR, gmtime(&tt_i)); // String start time without fraction second
-      sprintf(utc, "%s.%04dUTC ", utc, (int)(tt_f * 1E4));
-
+      strftime (utc, MSTR_LEN, FITS_TIMESTR, gmtime(&tt_i));    // String start time without fraction second
+      sprintf(utc, "%s.%04dUTC ", utc, (int)(tt_f * 1E4 + 0.5));// To put the fraction part in and make sure that it rounds to closest integer
       fprintf(stdout, "%s\t%f\n", utc, tt_f);
       
       if(ipcio_close_block_read(conf.hdu->data_block, conf.hdu->data_block->curbufsz)<0)
@@ -93,7 +90,7 @@ int do_flux2udp(conf_t conf)
 	}
       conf.hdu->data_block->curbuf = ipcio_open_block_read(conf.hdu->data_block, &curbufsz, &block_id);
       
-      tt += tsamp/1.E6;
+      tt += tsamp;
     }
   
   return EXIT_SUCCESS;
