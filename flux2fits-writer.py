@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# ./paf-baseband2power-stream.py -a paf-baseband2power-stream.conf -b /beegfs/DENG/JULY/ -c 0 -d 0 -e 0 -f 10
+# ./flux2fits-writer.py -a flux2fits-writer.conf -b /beegfs/DENG/JULY/ -c 0 -d 0 -e 0 -f 10 -g 1.0 -i 134.104.70.90:50000
 
 import os
 import time
@@ -54,7 +54,9 @@ def main(args):
     directory    = args.directory[0]
     memcheck     = args.memcheck[0]
     length       = args.length[0]
-       
+    integration  = args.integration[0]
+    interface    = args.interface[0]
+
     # Bind to multicast
     multicast_group = '224.1.1.1'
     server_address = ('', 5007)
@@ -88,10 +90,10 @@ def main(args):
     ndim_pol     = int(ConfigSectionMap(cfname, "BasicConf")['ndim_pol'])
     nchk_nic     = int(ConfigSectionMap(cfname, "BasicConf")['nchk_nic'])
     ncpu_numa    = int(ConfigSectionMap(cfname, "BasicConf")['ncpu_numa'])
+    tdf_sec      = float(ConfigSectionMap(cfname, "BasicConf")['tdf_sec'])
     
     # Capture configuration
     capture_ncpu    = int(ConfigSectionMap(cfname, "CaptureConf")['ncpu'])
-    capture_ndf    = int(ConfigSectionMap(cfname, "CaptureConf")['ndf'])
     capture_nbuf    = ConfigSectionMap(cfname, "CaptureConf")['nblk']
     capture_key     = ConfigSectionMap(cfname, "CaptureConf")['key']
     capture_key     = format(int("0x{:s}".format(capture_key), 0) + 2 * nic, 'x')
@@ -100,6 +102,8 @@ def main(args):
     capture_hfname  = ConfigSectionMap(cfname, "CaptureConf")['hfname']
     capture_nreader = ConfigSectionMap(cfname, "CaptureConf")['nreader']
     capture_sod     = ConfigSectionMap(cfname, "CaptureConf")['sod']
+
+    capture_ndf     = int(integration / tdf_sec) - int(integration / tdf_sec) % 32 # 32 = (4 * BLKSZ_SUM1) / NSAMP_DF, from the baseband2power.cu
     capture_rbufsz  = capture_ndf *  nchk_nic * 7168
     
     # baseband2power configuration
@@ -166,6 +170,10 @@ if __name__ == "__main__":
                     help='To run cuda-memcheck or not.')
     parser.add_argument('-f', '--length', type=float, nargs='+',
                         help='Length of data capture.')
+    parser.add_argument('-g', '--integration', type=float, nargs='+',
+                        help='Integration time for flux in seconds.')    
+    parser.add_argument('-i', '--interface', type=str, nargs='+',
+                        help='Interface to send the data (IP and port number, ip:port).')
     
     args = parser.parse_args()
     main(args)

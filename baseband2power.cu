@@ -15,6 +15,8 @@
 #include "cudautil.cuh"
 #include "kernel.cuh"
 
+// We need to keep the original reference time as it is better to keep the thing common;
+
 extern multilog_t *runtime_log;
 
 int init_baseband2power(conf_t *conf)
@@ -231,6 +233,7 @@ int do_baseband2power(conf_t conf)
 
       /* Copy data from device to host */
       CudaSafeCall(cudaMemcpy(conf.hdu_out->data_block->curbuf, conf.dbuf_out, conf.bufout_size, cudaMemcpyDeviceToHost));
+      
       /* Close previous data block and open a new one to write */
       if(ipcio_close_block_write(conf.hdu_out->data_block, conf.bufout_size)<0)
 	{
@@ -294,10 +297,10 @@ int register_header(conf_t *conf)
       fprintf(stderr, "Error getting PICOSECONDS, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
       return EXIT_FAILURE;
     }
-  fprintf(stdout, "%f\t%E\t%E\t", conf->mjd_start, conf->picoseconds / 86400.0E12, 0.5 * conf->tsamp_out / 86400.0E6);
+  //fprintf(stdout, "%f\t%E\t%E\t", conf->mjd_start, conf->picoseconds / 86400.0E12, 0.5 * conf->tsamp_out / 86400.0E6);
   
-  conf->mjd_start = conf->mjd_start + conf->picoseconds / 86400.0E12 + 0.5 * conf->tsamp_out / 86400.0E6;  // to the middle of interval
-  fprintf(stdout, "%f\n\n\n\n\n", conf->mjd_start);
+  //conf->mjd_start = conf->mjd_start + conf->picoseconds / 86400.0E12 + 0.5 * conf->tsamp_out / 86400.0E6;  // to the middle of interval
+  //fprintf(stdout, "%f\n\n\n\n\n", conf->mjd_start);
   
   scale = conf->tsamp_in / conf->tsamp_out;
 
@@ -315,12 +318,12 @@ int register_header(conf_t *conf)
       fprintf(stderr, "Error setting TSAMP, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
       return EXIT_FAILURE;
     }  
-  if (ascii_header_set(conf->hdrbuf_out, "MJD_START", "%lf", conf->mjd_start) < 0)  
-    {
-      multilog(runtime_log, LOG_ERR, "Error setting MJD_START, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
-      fprintf(stderr, "Error setting MJD_START, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
-      return EXIT_FAILURE;
-    }    
+  //if (ascii_header_set(conf->hdrbuf_out, "MJD_START", "%lf", conf->mjd_start) < 0)  
+  //  {
+  //    multilog(runtime_log, LOG_ERR, "Error setting MJD_START, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
+  //    fprintf(stderr, "Error setting MJD_START, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
+  //    return EXIT_FAILURE;
+  //  }    
   //if (ascii_header_set(conf->hdrbuf_out, "PICOSECONDS", "unset") < 0)  
   //  {
   //    multilog(runtime_log, LOG_ERR, "Error setting PICOSECONDS, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
@@ -332,7 +335,8 @@ int register_header(conf_t *conf)
   //    multilog(runtime_log, LOG_ERR, "Error setting UTC_START, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
   //    fprintf(stderr, "Error setting UTC_START, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
   //    return EXIT_FAILURE;
-  //  }    
+  //  }
+  
   if (ascii_header_set(conf->hdrbuf_out, "BYTES_PER_SECOND", "%lf", conf->bps_in * scale) < 0)  
     {
       multilog(runtime_log, LOG_ERR, "Error setting BYTES_PER_SECOND, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
