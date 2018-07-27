@@ -13,11 +13,12 @@
 #define DADA_HDR_SIZE 4096
 #define NCHAN_CHK     7
 #define NCHK_NIC      48
-#define NBYTE         4
+#define NBYTE_BUF     4
 
-#define DADA_TIMESTR      "%Y-%m-%d-%H:%M:%S"
-#define FITS_TIMESTR      "%Y-%m-%dT%H:%M:%S"
-
+#define DADA_TIMESTR  "%Y-%m-%d-%H:%M:%S"
+#define FITS_TIMESTR  "%Y-%m-%dT%H:%M:%S"
+#define NBYTE_UTC     28  // Bytes of UTC time stamp
+#define NBYTE_BIN     4   // Bytes for other number in the output binary
 typedef struct conf_t
 {
   key_t key;
@@ -32,6 +33,9 @@ typedef struct conf_t
   double tsamp;
   char utc_start[MSTR_LEN];
   double picoseconds;
+  float freq;
+  float chan_width;
+  int32_t nchan;
 }conf_t;
 
 int init_flux2udp(conf_t *conf);
