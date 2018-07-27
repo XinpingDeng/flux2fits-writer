@@ -35,6 +35,7 @@ RECEIVER     PAF               # Frontend receiver
 FREQ         unset                   # centre frequency in MHz
 BW           336             # bandwidth of in MHz (-ve lower sb)
 TSAMP        884736               # sampling interval in microseconds
+BEAM	     unset 		  # Beam id, for PAF
 
 BYTES_PER_SECOND  1519.097222
 NBIT         32                      # number of bits per sample, here record float

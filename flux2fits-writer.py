@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# ./flux2fits-writer.py -a flux2fits-writer.conf -b /beegfs/DENG/JULY/ -c 0 -d 0 -e 0 -f 10 -g 1.0 -i 134.104.70.90:50000
+# ./flux2fits-writer.py -a flux2fits-writer.conf -b /beegfs/DENG/JULY/ -c 0 -d 0 -e 0 -f 10 -g 1.0 -i 134.104.70.90:50000 -j 224.1.1.1:5007
 
 import os
 import time
@@ -42,29 +42,33 @@ def baseband2flux(baseband2flux_cpu, capture_key, baseband2flux_key, directory, 
         print ('taskset -c {:d} ./paf_baseband2flux -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2flux_cpu, capture_key, baseband2flux_key, directory, 0, capture_ndf, baseband2flux_nchan, baseband2flux_sod))
         os.system('taskset -c {:d} ./paf_baseband2flux -a {:s} -b {:s} -c {:s} -d {:d} -e {:d} -f {:d} -g {:d}'.format(baseband2flux_cpu, capture_key, baseband2flux_key, directory, 0, capture_ndf, baseband2flux_nchan, baseband2flux_sod))
             
-def flux2udp(flux2udp_cpu, baseband2flux_key, directory, ip, port):
-    print "taskset -c {:d} ./paf_flux2udp -a {:s} -b {:s} -c {:s} -d {:d} ".format(flux2udp_cpu, baseband2flux_key, directory, ip, port)
-    os.system("taskset -c {:d} ./paf_flux2udp -a {:s} -b {:s} -c {:s} -d {:d} ".format(flux2udp_cpu, baseband2flux_key, directory, ip, port))
+def flux2udp(flux2udp_cpu, baseband2flux_key, directory, ip_udp, port_udp, multicast_group, multicast_port):
+    print "taskset -c {:d} ./paf_flux2udp -a {:s} -b {:s} -c {:s} -d {:d} -e {:s} -f {:d} ".format(flux2udp_cpu, baseband2flux_key, directory, ip_udp, port_udp, multicast_group, multicast_port)
+    os.system("taskset -c {:d} ./paf_flux2udp -a {:s} -b {:s} -c {:s} -d {:d} -e {:s} -f {:d}  ".format(flux2udp_cpu, baseband2flux_key, directory, ip_udp, port_udp, multicast_group, multicast_port))
     
-#def dbdisk(dbdisk_cpu, baseband2flux_key, directory):
-#    print ('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
-#    os.system('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
+def dbdisk(dbdisk_cpu, baseband2flux_key, directory):
+    print ('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
+    os.system('dada_dbdisk -b {:d} -k {:s} -D {:s} -W -s -d'.format(dbdisk_cpu, baseband2flux_key, directory))
     
 def main(args):
-    cfname       = args.cfname[0]
-    numa         = args.numa[0]
-    nic          = numa + 1
-    visiblegpu   = args.visiblegpu[0]
-    directory    = args.directory[0]
-    memcheck     = args.memcheck[0]
-    length       = args.length[0]
-    integration  = args.integration[0]
-    interface    = args.interface[0]
-    ip, port     = interface.split(":")[0], int(interface.split(":")[1])
+    cfname           = args.cfname[0]
+    numa             = args.numa[0]
+    nic              = numa + 1
+    visiblegpu       = args.visiblegpu[0]
+    directory        = args.directory[0]
+    memcheck         = args.memcheck[0]
+    length           = args.length[0]
+    integration      = args.integration[0]
+    interface        = args.interface[0]
+    ip_udp, port_udp = interface.split(":")[0], int(interface.split(":")[1])
+
+    multicast                        = args.multicast[0]
+    multicast_group, multicast_port = multicast.split(":")[0], int(multicast.split(":")[1])
     
     # Bind to multicast
-    multicast_group = '224.1.1.1'
-    server_address = ('', 5007)
+    #multicast_group = '224.1.1.1'
+    #multicast_port = 5007
+    server_address = ('', multicast_port)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Create the socket
 
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -123,8 +127,8 @@ def main(args):
     baseband2flux_rbufsz     = baseband2flux_nchan * baseband2flux_nbyte
     baseband2flux_cpu        = ncpu_numa * numa + capture_ncpu
     
-    ## Dbdisk configuration
-    #dbdisk_cpu = ncpu_numa * numa + capture_ncpu + 1
+    # Dbdisk configuration
+    dbdisk_cpu = ncpu_numa * numa + capture_ncpu + 1
 
     # flux2udp configuration
     flux2udp_cpu = ncpu_numa * numa + capture_ncpu + 1
@@ -150,8 +154,8 @@ def main(args):
 
     t_capture       = threading.Thread(target = capture, args = (capture_key, capture_sod, capture_ndf, hdr, nic, capture_hfname, capture_efname, freq, length, directory, source_name, ra, dec,))
     t_baseband2flux = threading.Thread(target = baseband2flux, args = (baseband2flux_cpu, capture_key, baseband2flux_key, directory, numa, capture_ndf, baseband2flux_nchan, baseband2flux_sod, multi_gpu,))
-    #t_dbdisk         = threading.Thread(target = dbdisk, args = (dbdisk_cpu, baseband2flux_key, directory,))
-    t_flux2udp      = threading.Thread(target = flux2udp, args = (flux2udp_cpu, baseband2flux_key, directory, ip, port, ))
+    t_dbdisk         = threading.Thread(target = dbdisk, args = (dbdisk_cpu, baseband2flux_key, directory,))
+    t_flux2udp      = threading.Thread(target = flux2udp, args = (flux2udp_cpu, baseband2flux_key, directory, ip_udp, port_udp, multicast_group, multicast_port, ))
 
     t_capture.start()
     t_baseband2flux.start()
@@ -185,6 +189,8 @@ if __name__ == "__main__":
                         help='Integration time for flux in seconds.')    
     parser.add_argument('-i', '--interface', type=str, nargs='+',
                         help='Interface to send the data (IP and port number, ip:port).')
+    parser.add_argument('-j', '--multicast', type=str, nargs='+',
+                        help='Multicast interface to receive metadata from TOS (IP and port number, ip:port).')
     
     args = parser.parse_args()
     main(args)

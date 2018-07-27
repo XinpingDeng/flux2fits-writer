@@ -72,14 +72,17 @@ diskdb.o:diskdb.cu
 cudautil.o:cudautil.cu
 	$(NVCC) -c cudautil.cu $(INCLUDE_DIRS) ${C_FLAGS} ${CU_FLAGS}
 
-paf_flux2udp:paf_flux2udp.o flux2udp.o
-	$(CC) -o paf_flux2udp paf_flux2udp.o flux2udp.o $(LIB_DIRS) $(LIBS) 
+paf_flux2udp:paf_flux2udp.o flux2udp.o jsmn.o
+	$(CC) -o paf_flux2udp paf_flux2udp.o flux2udp.o jsmn.o $(LIB_DIRS) $(LIBS) 
 
 paf_flux2udp.o:paf_flux2udp.c
 	$(CC) -c paf_flux2udp.c $(INCLUDE_DIRS) ${C_FLAGS}
 
 flux2udp.o:flux2udp.c
 	$(CC) -c flux2udp.c $(INCLUDE_DIRS) ${C_FLAGS}
+
+jsmn.o:jsmn.c
+	$(CC) -c jsmn.c $(INCLUDE_DIRS) ${C_FLAGS}
 
 clean:
 	rm -f *.o *~

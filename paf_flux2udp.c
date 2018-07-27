@@ -13,14 +13,17 @@
 void usage ()
 {
   fprintf (stdout,
-	   "paf_flux2udp - To packet the flux data with other parameters to UDP and send it via given IP:port\n"
+	   "paf_flux2udp - To packet the flux data with other parameters to UDP and send it via given ip_udp:port_udp, it also forward TOS metadata from ip_meta:port_meta\n"
 	   "\n"
 	   "Usage: paf_flux2udp [options]\n"
 	   " -h  show help\n"
 	   " -a  Hexacdecimal shared memory key for incoming ring buffer\n"
 	   " -b  The name of the directory in which we will record the log\n"
 	   " -c  IP address to send data \n"
-	   " -d  Port number to send data \n");
+	   " -d  Port number to send data \n"
+	   " -e  IP address to receive metadata \n"
+	   " -f  Port number to receive metadata \n"
+	   );
 }
 
 multilog_t *runtime_log;
@@ -32,7 +35,7 @@ int main(int argc, char *argv[])
   char log_fname[MSTR_LEN];
   conf_t conf;
   
-  while((arg=getopt(argc,argv,"a:b:hc:d:")) != -1)
+  while((arg=getopt(argc,argv,"a:b:hc:d:e:f:")) != -1)
     {
       switch(arg)
 	{
@@ -53,11 +56,19 @@ int main(int argc, char *argv[])
 	  break;
 	  
 	case 'c':	  	  	  
-	  sscanf (optarg, "%s", conf.ip);
+	  sscanf (optarg, "%s", conf.ip_udp);
 	  break;
 
 	case 'd':	  	  	  
-	  sscanf (optarg, "%d", &conf.port);
+	  sscanf (optarg, "%d", &conf.port_udp);
+	  break;
+	  
+	case 'e':	  	  	  
+	  sscanf (optarg, "%s", conf.ip_meta);
+	  break;
+
+	case 'f':	  	  	  
+	  sscanf (optarg, "%d", &conf.port_meta);
 	  break;
 	}
     }
