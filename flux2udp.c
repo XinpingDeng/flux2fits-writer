@@ -74,7 +74,7 @@ int do_flux2udp(conf_t conf)
   size_t curbufsz;
   struct tm tm;
   char utc[MSTR_LEN];
-  double tsamp, tt, tt_f;
+  double tsamp, tt, tt_f, tt0;
   time_t tt_i;
   char binary_fname[MSTR_LEN];
   FILE *binary_fp = NULL;
@@ -95,21 +95,40 @@ int do_flux2udp(conf_t conf)
     
   // We need to be careful here, float may not be 4 bytes !!!!
   
-  sprintf(binary_fname, "%s/flux2udp.bin", conf.dir);
+  //sprintf(binary_fname, "%s/flux2udp.bin", conf.dir);
   
   read_header(&conf); // Get information from header
   strptime(conf.utc_start, DADA_TIMESTR, &tm);
   tsamp = conf.tsamp / 1.0E6; // In seconds
   tsamp_f = conf.tsamp;
   tt    = mktime(&tm) + conf.picoseconds / 1E12 + tsamp / 2.0; // To added in the fraction part of reference time and half of the sampling time (the time stamps should be at the middle of integration)
+  tt0 = tt;
   
+  /* First TOS metadata information */
+  recvfrom(conf.sock, (void *)buf, 1<<16, 0, (struct sockaddr *)&sa, &fromlen);
+  jsmn_init(&parser);
+  jsmn_parse(&parser, buf, strlen(buf), tokens, NTOKEN_META);
+  strncpy(bat, &buf[tokens[2].start], tokens[2].end - tokens[2].start);  // Becareful the index here, most ugly code I do 
+  strncpy(ra, &buf[tokens[27].start], tokens[27].end - tokens[27].start);
+  strncpy(dec, &buf[tokens[28].start], tokens[28].end - tokens[28].start);
+  strncpy(az, &buf[tokens[177].start], tokens[177].end - tokens[177].start);
+  strncpy(el, &buf[tokens[178].start], tokens[178].end - tokens[178].start);
+  ra_f = atof(ra);
+  dec_f = atof(dec);
+  az_f = atof(az);
+  el_f = atof(el);
+  
+  int index = 0;
   while(conf.hdu->data_block->curbufsz == conf.buf_size)
     {
-      fprintf(stdout, "%f\t", tt);
+      //fprintf(stdout, "%f\t", tt);
+      sprintf(binary_fname, "%s/flux2udp.bin%d", conf.dir, index);
+      index ++;
+      
       tt_i = (time_t)tt;
       tt_f = tt - tt_i;
-      
       binary_fp = fopen(binary_fname, "wb+");
+      
       /* Put key information into binary stream */
       fwrite(&conf.nchan, NBYTE_BIN, 1, binary_fp);                          // Number of channels
       fwrite(conf.hdu->data_block->curbuf, NBYTE_BIN, conf.nchan, binary_fp);// Flux of all channels
@@ -117,32 +136,32 @@ int do_flux2udp(conf_t conf)
       
       strftime (utc, MSTR_LEN, FITS_TIMESTR, gmtime(&tt_i));    // String start time without fraction second
       sprintf(utc, "%s.%04dUTC ", utc, (int)(tt_f * 1E4 + 0.5));// To put the fraction part in and make sure that it rounds to closest integer
-      //fprintf(stdout, "%s\t%f\n", utc, tt_f);
-      //fprintf(stdout, "%f\t%d\n", tsamp_f, sizeof(char));
-
       fwrite(utc, 1, NBYTE_UTC, binary_fp);                     // UTC timestamps
       fwrite(&conf.beam, NBYTE_BIN, 1, binary_fp);              // The beam id
-      //fprintf(stdout, "%d\n", conf.beam);
 
       /* Put TOS position information into binary stream*/
-      recvfrom(conf.sock, (void *)buf, 1<<16, 0, (struct sockaddr *)&sa, &fromlen);
-      jsmn_init(&parser);
-      jsmn_parse(&parser, buf, strlen(buf), tokens, NTOKEN_META);
-      strncpy(bat, &buf[tokens[2].start], tokens[2].end - tokens[2].start);  // Becareful the index here, most ugly code I do 
-      strncpy(ra, &buf[tokens[27].start], tokens[27].end - tokens[27].start);
-      strncpy(dec, &buf[tokens[28].start], tokens[28].end - tokens[28].start);
-      strncpy(az, &buf[tokens[177].start], tokens[177].end - tokens[177].start);
-      strncpy(el, &buf[tokens[178].start], tokens[178].end - tokens[178].start);
-      ra_f = atof(ra);
-      dec_f = atof(dec);
-      az_f = atof(az);
-      el_f = atof(el);
-      
+      if (tt - tt0 > 2.0)  // For safe, we only update metadata every 2 seconds;
+	{
+	  recvfrom(conf.sock, (void *)buf, 1<<16, 0, (struct sockaddr *)&sa, &fromlen);	  
+	  jsmn_init(&parser);
+	  jsmn_parse(&parser, buf, strlen(buf), tokens, NTOKEN_META);
+	  strncpy(bat, &buf[tokens[2].start], tokens[2].end - tokens[2].start);  // Becareful the index here, most ugly code I do 
+	  strncpy(ra, &buf[tokens[27].start], tokens[27].end - tokens[27].start);
+	  strncpy(dec, &buf[tokens[28].start], tokens[28].end - tokens[28].start);
+	  strncpy(az, &buf[tokens[177].start], tokens[177].end - tokens[177].start);
+	  strncpy(el, &buf[tokens[178].start], tokens[178].end - tokens[178].start);
+	  ra_f = atof(ra);
+	  dec_f = atof(dec);
+	  az_f = atof(az);
+	  el_f = atof(el);
+
+	  tt0 = tt;
+	}
       conf.leap = 37;
       bat2mjd(bat, conf.leap, &mjd);
       mjd_i = (int32_t)mjd;
       mjd_f = mjd - mjd_i;
-      fprintf(stdout, "%s\t%f\t%d\t%f\n", bat, mjd * 86400.0, mjd_i, mjd_f);
+      //fprintf(stdout, "%s\t%f\t%d\t%f\n", bat, mjd * 86400.0, mjd_i, mjd_f);
       //fprintf(stdout, "%s\t%f\t", ra, ra_f);
       //fprintf(stdout, "%s\t%f\t", dec, dec_f);
       //fprintf(stdout, "%s\t%f\t", az, az_f);
@@ -243,7 +262,7 @@ int read_header(conf_t *conf)
       fprintf(stderr, "Error getting BEAM, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
       return EXIT_FAILURE;
     }
-  fprintf(stdout, "HERE\t%d\n", conf->beam);
+  //fprintf(stdout, "HERE\t%d\n", conf->beam);
   
   if (ascii_header_get(conf->hdrbuf, "BW", "%f", &bw) < 0)  
     {

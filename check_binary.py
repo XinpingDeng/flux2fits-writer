@@ -5,13 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 fdir  = "/beegfs/DENG/JULY"
-fname = "flux2udp.bin"
+fname = "flux2udp.bin35"
 
 fname = os.path.join(fdir, fname)
 f = open(fname, "r")
 
 nchan = np.fromstring(f.read(4), dtype='int32')
-#f.seek(nchan[0] * 4, os.SEEK_CUR)
 flux = np.fromstring(f.read(nchan[0] * 4), dtype='float32')
 tsamp = np.fromstring(f.read(4), dtype='float32')
 utc_time = np.fromstring(f.read(28), dtype='c')
