@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 fdir  = "/beegfs/DENG/JULY"
-fname = "flux2udp.bin35"
+fname = "flux2udp.bin0"
 
 fname = os.path.join(fdir, fname)
 f = open(fname, "r")

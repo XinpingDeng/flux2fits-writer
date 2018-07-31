@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# ./flux2fits-writer.py -a flux2fits-writer.conf -b /beegfs/DENG/JULY/ -c 0 -d 0 -e 0 -f 10 -g 1.0 -i 134.104.70.90:50000 -j 224.1.1.1:5007
+# ./flux2fits-writer.py -a flux2fits-writer.conf -b /beegfs/DENG/JULY/ -c 0 -d 0 -e 0 -f 10 -g 1.0 -i 134.104.70.90:36943 -j 224.1.1.1:5007
 
 import os
 import time

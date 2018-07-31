@@ -786,7 +786,7 @@ int register_header(conf_t *conf)
   for(i = 0; i < NPORT_NIC; i++)  // Get the active sock
     if(conf->sock[i].active)
       break;
-  fprintf(stdout, "%d\n", conf->sock[i].hdr_start.beam);
+  //fprintf(stdout, "%d\n", conf->sock[i].hdr_start.beam);
   if (ascii_header_set(hdrbuf, "BEAM", "%ld", conf->sock[i].hdr_start.beam) < 0)  
     {
       multilog(runtime_log, LOG_ERR, "Error setting BEAM, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);

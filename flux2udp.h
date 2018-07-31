@@ -28,7 +28,7 @@ typedef struct conf_t
   int port_udp;
   char ip_meta[MSTR_LEN];
   int port_meta;
-  int sock;
+  int sock_meta, sock_udp;
   
   char dir[MSTR_LEN];
 
