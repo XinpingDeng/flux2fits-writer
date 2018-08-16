@@ -104,6 +104,7 @@ int do_flux2udp(conf_t conf)
   strptime(conf.utc_start, DADA_TIMESTR, &tm);
   tsamp = conf.tsamp / 1.0E6; // In seconds
   tsamp_f = conf.tsamp;
+  //fprintf(stdout, "%f\n", tsamp);
   tt    = mktime(&tm) + conf.picoseconds / 1E12 + tsamp / 2.0; // To added in the fraction part of reference time and half of the sampling time (the time stamps should be at the middle of integration)
   tt0 = tt;
   
@@ -122,6 +123,9 @@ int do_flux2udp(conf_t conf)
   el_f = atof(el);
   
   int index = 0;
+  time_t seconds;
+  char utc_now[MSTR_LEN];
+  //struct tm *loc_time;
   while(conf.hdu->data_block->curbufsz == conf.buf_size)
     {
       byte_sum = 0;
@@ -144,6 +148,13 @@ int do_flux2udp(conf_t conf)
       
       strftime (utc, MSTR_LEN, FITS_TIMESTR, gmtime(&tt_i));    // String start time without fraction second
       sprintf(utc, "%s.%04dUTC ", utc, (int)(tt_f * 1E4 + 0.5));// To put the fraction part in and make sure that it rounds to closest integer
+
+      seconds = time (NULL);
+      //loc_time = localtime (&seconds);
+      strftime(utc_now, MSTR_LEN, FITS_TIMESTR, gmtime(&seconds));
+	
+      //fprintf(stdout, "%s\t%s,\tDELAY: %f seconds.\n", utc, utc_now, seconds - tt);
+      
       fwrite(utc, 1, NBYTE_UTC, binary_fp);                     // UTC timestamps
       byte_sum +=NBYTE_UTC;
       fwrite(&conf.beam, NBYTE_BIN, 1, binary_fp);              // The beam id

@@ -262,6 +262,8 @@ int register_header(conf_t *conf)
   size_t hdrsz;
   double scale;
   conf->tsamp_out = NSAMP_DF * conf->bufin_ndf * TSAMP;
+
+  fprintf(stdout, "%f\n", conf->tsamp_out);
   
   conf->hdrbuf_in  = ipcbuf_get_next_read(conf->hdu_in->header_block, &hdrsz);
   if(hdrsz != DADA_HDR_SIZE)

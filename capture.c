@@ -875,8 +875,13 @@ int acquire_start_time(hdr_t hdr_start, char efname[MSTR_LEN], char utc_start[MS
   sec = SECDAY * mjd_epoch + hdr_start.sec + floor(sec_prd);  // int seconds from 1970-01-01
   strftime (utc_start, MSTR_LEN, DADA_TIMESTR, gmtime(&sec)); // String start time without fraction second
   *mjd_start = sec/SECDAY + MJD1970;                          // UTC_START = MJD_START
+  
+  time_t seconds;
+  char utc_now[MSTR_LEN];
+  seconds = time (NULL);
+  strftime(utc_now, MSTR_LEN, DADA_TIMESTR, gmtime(&seconds));
 
-  fprintf(stdout, "HERE\t%s\n", utc_start);
+  fprintf(stdout, "HERE\t%s\t%s\n", utc_start, utc_now);
   
   //time_t now;
   //time(&now);
