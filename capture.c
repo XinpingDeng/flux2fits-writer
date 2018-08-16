@@ -876,7 +876,8 @@ int acquire_start_time(hdr_t hdr_start, char efname[MSTR_LEN], char utc_start[MS
   strftime (utc_start, MSTR_LEN, DADA_TIMESTR, gmtime(&sec)); // String start time without fraction second
   *mjd_start = sec/SECDAY + MJD1970;                          // UTC_START = MJD_START
 
-  //fprintf(stdout, "HERE\t%s\n", utc_start);
+  fprintf(stdout, "HERE\t%s\n", utc_start);
+  
   //time_t now;
   //time(&now);
   ////struct tm *mytime = localtime(&now);

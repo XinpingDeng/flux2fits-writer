@@ -126,7 +126,8 @@ int do_flux2udp(conf_t conf)
     {
       byte_sum = 0;
       //fprintf(stdout, "%f\t", tt);
-      sprintf(binary_fname, "%s/flux2udp.bin%d", conf.dir, index);
+      //sprintf(binary_fname, "%s/flux2udp.bin%d", conf.dir, index);
+      sprintf(binary_fname, "%s/flux2udp.bin", conf.dir);
       index ++;
       
       tt_i = (time_t)tt;
@@ -200,7 +201,7 @@ int do_flux2udp(conf_t conf)
       binary_fp = fopen(binary_fname, "rb");
       fread(buf_udp, byte_sum, 1, binary_fp);
 
-      //fprintf(stdout, "HERE\t%d\n", byte_sum);
+      fprintf(stdout, "HERE\t%d\n", byte_sum);
       
       if(sendto(conf.sock_udp, buf_udp, byte_sum, 0, (struct sockaddr *)&sa_udp, tolen) == -1)
         {	  
