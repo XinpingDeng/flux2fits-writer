@@ -229,7 +229,7 @@ int do_baseband2flux(conf_t conf)
       unpack_detect_kernel<<<gridsize_unpack_detect, blocksize_unpack_detect, 0>>>(conf.dbuf_in, conf.buf_rt1);
       sum_kernel<<<gridsize_sum1, blocksize_sum1, blocksize_sum1.x * sizeof(float)>>>(conf.buf_rt1, conf.buf_rt2);
       sum_kernel<<<gridsize_sum2, blocksize_sum2, blocksize_sum2.x * sizeof(float)>>>(conf.buf_rt2, conf.dbuf_out);
-      fprintf(stdout, "HERE\n");
+      //fprintf(stdout, "HERE\n");
       
       /* Close previous data block and open a new one to read */
       if(ipcio_close_block_read(conf.hdu_in->data_block, conf.hdu_in->data_block->curbufsz)<0)

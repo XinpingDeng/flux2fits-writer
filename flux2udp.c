@@ -16,6 +16,8 @@
 #include "paf_flux2udp.h"
 #include "jsmn.h"
 
+#define UDPPKT_LEN 1416
+
 extern multilog_t *runtime_log;
 
 int init_flux2udp(conf_t *conf)
@@ -92,6 +94,8 @@ int do_flux2udp(conf_t conf)
   float mjd_f;
   float tsamp_f;
   int byte_sum;
+  char udppkt[UDPPKT_LEN];
+  
   fromlen = sizeof(sa_meta);
   tolen = sizeof(sa_meta);
 
@@ -102,11 +106,10 @@ int do_flux2udp(conf_t conf)
   /* Do the job */
   read_header(&conf); // Get information from header
   strptime(conf.utc_start, DADA_TIMESTR, &tm);
-  tsamp = conf.tsamp / 1.0E6; // In seconds
+  tsamp   = conf.tsamp / 1.0E6; // In seconds
   tsamp_f = conf.tsamp;
-  //fprintf(stdout, "%f\n", tsamp);
-  tt    = mktime(&tm) + conf.picoseconds / 1E12 + tsamp / 2.0; // To added in the fraction part of reference time and half of the sampling time (the time stamps should be at the middle of integration)
-  tt0 = tt;
+  tt      = mktime(&tm) + conf.picoseconds / 1E12 + tsamp / 2.0; // To added in the fraction part of reference time and half of the sampling time (the time stamps should be at the middle of integration)
+  tt0     = tt;
   
   /* First TOS metadata information */
   recvfrom(conf.sock_meta, (void *)buf_meta, 1<<16, 0, (struct sockaddr *)&sa_meta, &fromlen);
@@ -122,22 +125,16 @@ int do_flux2udp(conf_t conf)
   az_f = atof(az);
   el_f = atof(el);
   
-  int index = 0;
-  time_t seconds;
-  char utc_now[MSTR_LEN];
-  //struct tm *loc_time;
+  struct timespec now;
   while(conf.hdu->data_block->curbufsz == conf.buf_size)
     {
       byte_sum = 0;
-      //fprintf(stdout, "%f\t", tt);
-      //sprintf(binary_fname, "%s/flux2udp.bin%d", conf.dir, index);
       sprintf(binary_fname, "%s/flux2udp.bin", conf.dir);
-      index ++;
       
       tt_i = (time_t)tt;
       tt_f = tt - tt_i;
       binary_fp = fopen(binary_fname, "wb+");
-      
+			
       /* Put key information into binary stream */
       fwrite(&conf.nchan, NBYTE_BIN, 1, binary_fp);                          // Number of channels
       byte_sum +=NBYTE_BIN;
@@ -149,11 +146,8 @@ int do_flux2udp(conf_t conf)
       strftime (utc, MSTR_LEN, FITS_TIMESTR, gmtime(&tt_i));    // String start time without fraction second
       sprintf(utc, "%s.%04dUTC ", utc, (int)(tt_f * 1E4 + 0.5));// To put the fraction part in and make sure that it rounds to closest integer
 
-      seconds = time (NULL);
-      //loc_time = localtime (&seconds);
-      strftime(utc_now, MSTR_LEN, FITS_TIMESTR, gmtime(&seconds));
-	
-      //fprintf(stdout, "%s\t%s,\tDELAY: %f seconds.\n", utc, utc_now, seconds - tt);
+      clock_gettime(CLOCK_REALTIME, &now);
+      fprintf(stdout, "DELAY: %f seconds.\n", now.tv_sec + (double)(now.tv_nsec/1.0E9L) - tt);
       
       fwrite(utc, 1, NBYTE_UTC, binary_fp);                     // UTC timestamps
       byte_sum +=NBYTE_UTC;
@@ -182,11 +176,6 @@ int do_flux2udp(conf_t conf)
       bat2mjd(bat, conf.leap, &mjd);
       mjd_i = (int32_t)mjd;
       mjd_f = mjd - mjd_i;
-      //fprintf(stdout, "%s\t%f\t%d\t%f\n", bat, mjd * 86400.0, mjd_i, mjd_f);
-      //fprintf(stdout, "%s\t%f\t", ra, ra_f);
-      //fprintf(stdout, "%s\t%f\t", dec, dec_f);
-      //fprintf(stdout, "%s\t%f\t", az, az_f);
-      //fprintf(stdout, "%s\t%f\n", el, el_f);
 
       fwrite(&ra_f, NBYTE_BIN, 1, binary_fp);              // RA of boresight
       byte_sum +=NBYTE_BIN;
@@ -202,27 +191,20 @@ int do_flux2udp(conf_t conf)
       byte_sum +=NBYTE_BIN;
       
       /* Put TOS frequency information into binary stream*/
-      fwrite(&conf.freq, NBYTE_BIN, 1, binary_fp);              // The beam id
+      fwrite(&conf.freq, NBYTE_BIN, 1, binary_fp);             
       byte_sum +=NBYTE_BIN;
-      fwrite(&conf.chan_width, NBYTE_BIN, 1, binary_fp);              // The beam id
+      fwrite(&conf.chan_width, NBYTE_BIN, 1, binary_fp);       
       byte_sum +=NBYTE_BIN;
-      fclose(binary_fp);
 
       /* Read the file and sent the content with UDP socket */
-      binary_fp = fopen(binary_fname, "rb");
+      fseek(binary_fp, 0, SEEK_SET);
       fread(buf_udp, byte_sum, 1, binary_fp);
-
-      fprintf(stdout, "HERE\t%d\n", byte_sum);
-      
       if(sendto(conf.sock_udp, buf_udp, byte_sum, 0, (struct sockaddr *)&sa_udp, tolen) == -1)
         {	  
 	  multilog (runtime_log, LOG_ERR, "sento() failed\n");
 	  fprintf(stderr, "sendto() failed, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
 	  return EXIT_FAILURE;
-        }
-
-      //fprintf(stdout, "%s\n", buf_udp);
-      
+        }      
       fclose(binary_fp);
       
       if(ipcio_close_block_read(conf.hdu->data_block, conf.hdu->data_block->curbufsz)<0)

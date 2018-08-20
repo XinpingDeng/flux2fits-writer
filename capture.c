@@ -850,6 +850,7 @@ int acquire_start_time(hdr_t hdr_start, char efname[MSTR_LEN], char utc_start[MS
   char line[MSTR_LEN];
   time_t sec;
   double sec_prd, mjd_epoch, micoseconds;
+  struct timespec now;
   
   fp = fopen(efname, "r");
   if(fp == NULL)
@@ -876,12 +877,13 @@ int acquire_start_time(hdr_t hdr_start, char efname[MSTR_LEN], char utc_start[MS
   strftime (utc_start, MSTR_LEN, DADA_TIMESTR, gmtime(&sec)); // String start time without fraction second
   *mjd_start = sec/SECDAY + MJD1970;                          // UTC_START = MJD_START
   
-  time_t seconds;
-  char utc_now[MSTR_LEN];
-  seconds = time (NULL);
-  strftime(utc_now, MSTR_LEN, DADA_TIMESTR, gmtime(&seconds));
-
-  fprintf(stdout, "HERE\t%s\t%s\n", utc_start, utc_now);
+  //time_t seconds;
+  //char utc_now[MSTR_LEN];
+  //seconds = time (NULL);
+  //strftime(utc_now, MSTR_LEN, DADA_TIMESTR, gmtime(&seconds));
+  clock_gettime(CLOCK_REALTIME, &now);
+  
+  //fprintf(stdout, "HERE\t%f\n", now.tv_sec + (double)(now.tv_nsec / 1.0E9L) - (SECDAY * mjd_epoch + hdr_start.sec + sec_prd));
   
   //time_t now;
   //time(&now);
