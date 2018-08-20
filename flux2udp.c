@@ -126,16 +126,17 @@ int do_flux2udp(conf_t conf)
   el_f = atof(el);
   
   struct timespec now;
+  sprintf(binary_fname, "%s/flux2udp.bin", conf.dir);
+  binary_fp = fopen(binary_fname, "wb+");
   while(conf.hdu->data_block->curbufsz == conf.buf_size)
     {
       byte_sum = 0;
-      sprintf(binary_fname, "%s/flux2udp.bin", conf.dir);
       
       tt_i = (time_t)tt;
       tt_f = tt - tt_i;
-      binary_fp = fopen(binary_fname, "wb+");
 			
       /* Put key information into binary stream */
+      fseek(binary_fp, 0, SEEK_SET);
       fwrite(&conf.nchan, NBYTE_BIN, 1, binary_fp);                          // Number of channels
       byte_sum +=NBYTE_BIN;
       fwrite(conf.hdu->data_block->curbuf, NBYTE_BIN, conf.nchan, binary_fp);// Flux of all channels
@@ -205,7 +206,6 @@ int do_flux2udp(conf_t conf)
 	  fprintf(stderr, "sendto() failed, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
 	  return EXIT_FAILURE;
         }      
-      fclose(binary_fp);
       
       if(ipcio_close_block_read(conf.hdu->data_block, conf.hdu->data_block->curbufsz)<0)
       	{
@@ -216,7 +216,8 @@ int do_flux2udp(conf_t conf)
       conf.hdu->data_block->curbuf = ipcio_open_block_read(conf.hdu->data_block, &curbufsz, &block_id);
       tt += tsamp;
     }
-
+  fclose(binary_fp);
+  
   return EXIT_SUCCESS;
 }
 

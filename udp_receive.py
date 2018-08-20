@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # Create a UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-server_address = ('134.104.70.91', 17106)
+server_address = ('134.104.70.90', 17106)
 #server_address = ("10.17.0.2", 17100)
 sock.bind(server_address)
 while (1):
