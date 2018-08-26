@@ -215,6 +215,7 @@ int do_flux2udp(conf_t conf)
 	}
       conf.hdu->data_block->curbuf = ipcio_open_block_read(conf.hdu->data_block, &curbufsz, &block_id);
       tt += tsamp;
+      //fprintf(stdout, "FLUX2UDP:\tEOD\tINSIDE\t%"PRIu64"\t%"PRIu64"\n", curbufsz, conf.buf_size);
     }
   fclose(binary_fp);
   

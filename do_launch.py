@@ -22,23 +22,20 @@ parser.add_argument('-a', '--length', type=float, nargs='+',
                     help='The length in second for data capture')
 parser.add_argument('-b', '--numa', type=int, nargs='+',
                     help='On which numa node we do the work, 0 or 1')
-parser.add_argument('-c', '--memsize', type=int, nargs='+',
-                    help='The name of pulsar')
-parser.add_argument('-d', '--ddir', type=str, nargs='+',
+parser.add_argument('-c', '--ddir', type=str, nargs='+',
                     help='Directory with configuration file, timing model and to record data')
-parser.add_argument('-e', '--hdir', type=str, nargs='+',
+parser.add_argument('-d', '--hdir', type=str, nargs='+',
                     help='Home directory')
-parser.add_argument('-f', '--uid', type=int, nargs='+',
+parser.add_argument('-e', '--uid', type=int, nargs='+',
                     help='UID of user')
-parser.add_argument('-g', '--gid', type=int, nargs='+',
+parser.add_argument('-f', '--gid', type=int, nargs='+',
                     help='Group ID of the user belongs to')
-parser.add_argument('-i', '--dname', type=str, nargs='+',
+parser.add_argument('-g', '--dname', type=str, nargs='+',
                     help='The name of docker container')
 
 args    = parser.parse_args()
 length  = args.length[0]
 numa    = args.numa[0]    # It determines numa node id, memory allocation place, NiC id and also GPU id
-memsize = args.memsize[0] # The number here should be larger than the required shared memory size in bytes, the required shared memory size is the total shared memory used by all containers. 
 ddir    = args.ddir[0]
 hdir    = args.hdir[0]
 uid     = args.uid[0]
@@ -49,7 +46,7 @@ gpu     = numa  # Either numa or "all"
 dvolume = '{:s}:{:s}'.format(ddir, ddir)
 hvolume = '{:s}:{:s}'.format(hdir, hdir)
 
-com_line = "docker run -it --rm --runtime=nvidia -e DISPLAY --net=host -v {:s} -v {:s} -u {:d}:{:d} -e NVIDIA_VISIBLE_DEVICES={:s} -e NVIDIA_DRIVER_CAPABILITIES=all --ulimit memlock={:d} --name {:s}0 xinpingdeng/{:s}".format(dvolume, hvolume, uid, gid, str(gpu), memsize, dname, dname)
+com_line = "docker run -it --rm --runtime=nvidia -e DISPLAY --net=host -v {:s} -v {:s} -u {:d}:{:d} -e NVIDIA_VISIBLE_DEVICES={:s} -e NVIDIA_DRIVER_CAPABILITIES=all --ulimit memlock=-1:-1 --name {:s}{:d} xinpingdeng/{:s}".format(dvolume, hvolume, uid, gid, str(gpu), dname, numa, dname)
 
 print com_line
 print "\nYou are going to a docker container with the name {:s}!\n".format(dname)

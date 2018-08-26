@@ -180,9 +180,6 @@ int destroy_process(conf_t conf)
   dada_hdu_disconnect(conf.hdu_in);
   dada_hdu_destroy(conf.hdu_in);
 
-  //ipcio_destroy(conf.hdu_out->data_block);
-  //ipcbuf_destroy(conf.hdu_out->header_block);
-  
   dada_hdu_unlock_write(conf.hdu_out);
   dada_hdu_disconnect(conf.hdu_out);
   dada_hdu_destroy(conf.hdu_out);
@@ -197,7 +194,7 @@ int do_baseband2flux(conf_t conf)
   dim3 gridsize_unpack_detect, blocksize_unpack_detect;
   dim3 gridsize_sum1, blocksize_sum1;
   dim3 gridsize_sum2, blocksize_sum2;
-
+    
   gridsize_unpack_detect = conf.gridsize_unpack_detect;
   blocksize_unpack_detect = conf.blocksize_unpack_detect;
   gridsize_sum1 = conf.gridsize_sum1;
@@ -211,6 +208,7 @@ int do_baseband2flux(conf_t conf)
 #endif
   
   while(conf.hdu_in->data_block->curbufsz == conf.bufin_size)
+  //while(!ipcbuf_eod((ipcbuf_t *)conf.hdu_in->data_block))
     {
 #ifdef DEBUG
       clock_gettime(CLOCK_REALTIME, &start);
@@ -250,8 +248,24 @@ int do_baseband2flux(conf_t conf)
 	  fprintf(stderr, "close_buffer: ipcio_close_block_write failed, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
 	  return EXIT_FAILURE;
 	}
-
+      //fprintf(stdout, "FLUX2UDP:\tEOD\tINSIDE\t%"PRIu64"\n", curbufsz);
+      
+      //fprintf(stdout, "IPCBUF_EOD:%d\n", ipcbuf_eod((ipcbuf_t *)conf.hdu_in->data_block));
       conf.hdu_out->data_block->curbuf = ipcio_open_block_write(conf.hdu_out->data_block, &block_id);   /* Open buffer to write */     
+    }
+
+  if(ipcio_close_block_read(conf.hdu_in->data_block, conf.hdu_in->data_block->curbufsz)<0)
+    {
+      multilog (runtime_log, LOG_ERR, "close_buffer: ipcio_close_block_write failed\n");
+      fprintf(stderr, "close_buffer: ipcio_close_block_write failed, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
+      return EXIT_FAILURE;
+    }
+  
+  if(ipcio_close_block_write(conf.hdu_out->data_block, 0)<0)
+    {
+      multilog (runtime_log, LOG_ERR, "close_buffer: ipcio_close_block_write failed\n");
+      fprintf(stderr, "close_buffer: ipcio_close_block_write failed, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
+      return EXIT_FAILURE;
     }
   
   return EXIT_SUCCESS;
@@ -263,7 +277,7 @@ int register_header(conf_t *conf)
   double scale;
   conf->tsamp_out = NSAMP_DF * conf->bufin_ndf * TSAMP;
 
-  fprintf(stdout, "%f\n", conf->tsamp_out);
+  fprintf(stdout, "The real tsamp is: %f seconds.\n", conf->tsamp_out/1.0E6);
   
   conf->hdrbuf_in  = ipcbuf_get_next_read(conf->hdu_in->header_block, &hdrsz);
   if(hdrsz != DADA_HDR_SIZE)

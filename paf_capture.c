@@ -171,7 +171,7 @@ int main(int argc, char **argv)
       //fprintf(stderr, "Can not capture data, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
       return EXIT_FAILURE;
     }
-
+  
   /* Check the result */
   statistics(conf);
   

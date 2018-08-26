@@ -30,6 +30,7 @@ extern multilog_t *runtime_log;
 
 int threads(conf_t *conf)
 {
+  conf_t *captureconf = (conf_t *)conf;
   int i, ret[MPORT_NIC + 1], node;
   pthread_t thread[MPORT_NIC + 1];
   pthread_attr_t attr;
@@ -38,7 +39,8 @@ int threads(conf_t *conf)
   node = (int)ip[3] - 1;   // Count from zero;
   ip = NULL;
   int active_ports = conf->active_ports;
-
+  ipcbuf_t *db = NULL;
+  
 #ifdef DEBUG
   fprintf(stdout, "*********************************************\n");
   fprintf(stdout, "WE ARE ON CAPTURE PART...\n");
@@ -98,16 +100,16 @@ void *sync_thread(void *conf)
 	  clock_gettime(CLOCK_REALTIME, &start);
 #endif	  
 	  /* Close current buffer */
-	  if(ipcio_close_block_write(captureconf->hdu->data_block, captureconf->rbufsz) < 0)
-	    //if(ipcbuf_mark_filled ((ipcbuf_t*)captureconf->hdu->data_block, captureconf->rbufsz) < 0)
+	  //if(ipcio_close_block_write(captureconf->hdu->data_block, captureconf->rbufsz) < 0)
+	  if(ipcbuf_mark_filled ((ipcbuf_t*)captureconf->hdu->data_block, captureconf->rbufsz) < 0)
 	    {
 	      multilog (runtime_log, LOG_ERR, "close_buffer: ipcio_close_block_write failed\n");
 	      fprintf(stderr, "close_buffer: ipcio_close_block_write failed, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
 	      return NULL;
 	    }
 
-	  cbuf = ipcio_open_block_write(captureconf->hdu->data_block, &block_id);
-	  //cbuf = ipcbuf_get_next_write ((ipcbuf_t*)captureconf->hdu->data_block);
+	  //cbuf = ipcio_open_block_write(captureconf->hdu->data_block, &block_id);
+	  cbuf = ipcbuf_get_next_write ((ipcbuf_t*)captureconf->hdu->data_block);
 	  
 #ifdef DEBUG
 	  clock_gettime(CLOCK_REALTIME, &stop);
@@ -180,8 +182,8 @@ void *sync_thread(void *conf)
 	nfinish += finish[i];
       if(nfinish == captureconf->active_ports)
 	{
-	  //if(ipcbuf_mark_filled ((ipcbuf_t*)captureconf->hdu->data_block, captureconf->rbufsz) < 0)
-	  if(ipcio_close_block_write (captureconf->hdu->data_block, captureconf->rbufsz) < 0)  // This should enable eod at current buffer
+	  if(ipcbuf_mark_filled ((ipcbuf_t*)captureconf->hdu->data_block, captureconf->rbufsz) < 0)
+	  //if(ipcio_close_block_write (captureconf->hdu->data_block, captureconf->rbufsz) < 0)  // This should enable eod at current buffer
 	    {
 	      multilog (runtime_log, LOG_ERR, "close_buffer: ipcio_close_block_write failed\n");
 	      fprintf(stderr, "close_buffer: ipcio_close_block_write failed, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
@@ -192,8 +194,8 @@ void *sync_thread(void *conf)
 	}
       if(quit == 1)
 	{
-	  //if(ipcbuf_mark_filled ((ipcbuf_t*)captureconf->hdu->data_block, captureconf->rbufsz) < 0)
-	  if (ipcio_close_block_write (captureconf->hdu->data_block, captureconf->rbufsz) < 0) // This should enable eod at current buffer
+	  if(ipcbuf_mark_filled ((ipcbuf_t*)captureconf->hdu->data_block, captureconf->rbufsz) < 0)
+	    //if (ipcio_close_block_write (captureconf->hdu->data_block, captureconf->rbufsz) < 0) // This should enable eod at current buffer
 	    {
 	      multilog (runtime_log, LOG_ERR, "close_buffer: ipcio_close_block_write failed\n");
 	      fprintf(stderr, "close_buffer: ipcio_close_block_write failed, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);
@@ -205,8 +207,8 @@ void *sync_thread(void *conf)
     }
   
   /* Exit */
-  //if(ipcbuf_mark_filled ((ipcbuf_t*)captureconf->hdu->data_block, captureconf->rbufsz) < 0)
-  if (ipcio_close_block_write (captureconf->hdu->data_block, captureconf->rbufsz) < 0)  // This should enable eod at current buffer
+  if(ipcbuf_mark_filled ((ipcbuf_t*)captureconf->hdu->data_block, captureconf->rbufsz) < 0)
+    //if (ipcio_close_block_write (captureconf->hdu->data_block, captureconf->rbufsz) < 0)  // This should enable eod at current buffer
     {
       multilog (runtime_log, LOG_ERR, "close_buffer: ipcio_close_block_write failed\n");
       fprintf(stderr, "close_buffer: ipcio_close_block_write failed, which happens at \"%s\", line [%d].\n", __FILE__, __LINE__);

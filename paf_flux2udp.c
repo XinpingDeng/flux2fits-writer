@@ -85,11 +85,6 @@ int main(int argc, char *argv[])
   multilog_add(runtime_log, fp_log);
   multilog(runtime_log, LOG_INFO, "START PAF_FLUX2UDP\n");
   
-  /* Destory log interface */
-  multilog(runtime_log, LOG_INFO, "FINISH PAF_FLUX2UDP\n\n");
-  multilog_close(runtime_log);
-  fclose(fp_log);
-
   /* init */
   init_flux2udp(&conf);
 
@@ -99,5 +94,10 @@ int main(int argc, char *argv[])
   /* delete it */
   destroy_flux2udp(conf);
   
+  /* Destory log interface */
+  multilog(runtime_log, LOG_INFO, "FINISH PAF_FLUX2UDP\n\n");
+  multilog_close(runtime_log);
+  fclose(fp_log);
+
   return EXIT_SUCCESS;
 }
